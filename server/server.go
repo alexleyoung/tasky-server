@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/alexleyoung/taksy-server/db"
 )
 
 func Start() {
+	db.InitDB()
 	initEndpoints()
 
 	fmt.Println("Server running on port 8080")
