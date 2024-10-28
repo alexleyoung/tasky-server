@@ -9,7 +9,7 @@ import (
 )
 
 func Start() {
-	db.InitDB()
+	db.Init()
 	initEndpoints()
 
 	fmt.Println("Server running on port 8080")
