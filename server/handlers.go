@@ -22,7 +22,7 @@ func taskHandlers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getTasks(w http.ResponseWriter, r *http.Request, c *sql.DB) {
+func getTasks(w http.ResponseWriter, _ *http.Request, c *sql.DB) {
 	rows, err := c.Query("SELECT * FROM tasks")
 	if err != nil {
 		panic(err)
@@ -88,16 +88,16 @@ func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	}
 }
 
-// Expects a json body with the following fields:
-// id, name, description, due_date, completed
+// Expects a query param with the id of the task to delete
 func deleteTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
-	var task db.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// get id from request
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
 
-	_, err := c.Exec("DELETE FROM tasks WHERE id = ?", task.ID)
+	_, err := c.Exec("DELETE FROM tasks WHERE id = ?", id)
 	if err != nil {
 		panic(err)
 	}
