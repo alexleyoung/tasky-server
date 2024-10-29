@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/alexleyoung/taksy-server/db"
 	_ "github.com/mattn/go-sqlite3"
@@ -49,8 +50,9 @@ func getTasks(w http.ResponseWriter, _ *http.Request, c *sql.DB) {
 func createTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	// Get json from body
 	var task db.TaskPost
+
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "No task provided", http.StatusBadRequest)
 		return
 	}
 
@@ -70,19 +72,49 @@ func createTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 // Expects a json body with the following fields:
 // id, name, description, due_date, completed
 func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
-	var task db.Task
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	var task db.TaskPost
+	var updateFields []string
+	var updateValues []interface{}
+
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	println(task.Name, task.Description, task.DueDate, task.Completed)
 
-	// Validate task
-	if task.Name == "" {
-		http.Error(w, "Name is required", http.StatusBadRequest)
+	// Build the update statement based on which fields are set
+	if task.Name != "" {
+		updateFields = append(updateFields, "name = ?")
+		updateValues = append(updateValues, task.Name)
+	}
+	if task.Description != "" {
+		updateFields = append(updateFields, "description = ?")
+		updateValues = append(updateValues, task.Description)
+	}
+	if task.DueDate != "" { // Adjust condition if DueDate is a time.Time type
+		updateFields = append(updateFields, "due_date = ?")
+		updateValues = append(updateValues, task.DueDate)
+	}
+	if task.Completed || !task.Completed {
+		updateFields = append(updateFields, "completed = ?")
+		updateValues = append(updateValues, task.Completed)
+	}
+	updateValues = append(updateValues, id) // Append the ID for the WHERE clause
+
+	if len(updateFields) == 0 {
+		http.Error(w, "No fields to update", http.StatusBadRequest)
 		return
 	}
 
-	_, err := c.Exec("UPDATE tasks SET name = ?, description = ?, due_date = ?, completed = ? WHERE id = ?", task.Name, task.Description, task.DueDate, task.Completed, task.ID)
+	// Construct the final SQL query
+	query := "UPDATE tasks SET " + strings.Join(updateFields, ", ") + " WHERE id = ?"
+	_, err := c.Exec(query, updateValues...)
 	if err != nil {
 		panic(err)
 	}
