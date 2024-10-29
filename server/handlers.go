@@ -3,7 +3,6 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/alexleyoung/taksy-server/db"
@@ -41,11 +40,12 @@ func getTasks(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 		tasks = append(tasks, task)
 	}
 
-	fmt.Println(tasks)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 
+// Expects a json body with the following fields:
+// name, description, due_date, completed
 func createTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	// Get json from body
 	var task db.TaskPost
@@ -67,8 +67,25 @@ func createTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	}
 }
 
+// Expects a json body with the following fields:
+// id, name, description, due_date, completed
 func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
-	w.Write([]byte("Hello, world!"))
+	var task db.Task
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate task
+	if task.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err := c.Exec("UPDATE tasks SET name = ?, description = ?, due_date = ?, completed = ? WHERE id = ?", task.Name, task.Description, task.DueDate, task.Completed, task.ID)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
