@@ -97,8 +97,13 @@ func deleteTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 		return
 	}
 
-	_, err := c.Exec("DELETE FROM tasks WHERE id = ?", id)
+	res, err := c.Exec("DELETE FROM tasks WHERE id = ?", id)
 	if err != nil {
 		panic(err)
+	}
+
+	if num, _ := res.RowsAffected(); num == 0 {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
 	}
 }
