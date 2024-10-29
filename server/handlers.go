@@ -12,6 +12,7 @@ import (
 
 func taskHandlers(w http.ResponseWriter, r *http.Request) {
 	db := db.Connect()
+	defer db.Close()
 	if r.Method == "GET" {
 		getTasks(w, r, db)
 	} else if r.Method == "POST" {
@@ -69,8 +70,9 @@ func createTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	}
 }
 
-// Expects a json body with the following fields:
-// id, name, description, due_date, completed
+// Expects a query param with the id of the task to update
+// Expects a json body with at least one of the following fields:
+// name, description, due_date, completed
 func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
@@ -86,7 +88,6 @@ func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	println(task.Name, task.Description, task.DueDate, task.Completed)
 
 	// Build the update statement based on which fields are set
 	if task.Name != "" {
