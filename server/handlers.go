@@ -88,6 +88,17 @@ func updateTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
 	}
 }
 
+// Expects a json body with the following fields:
+// id, name, description, due_date, completed
 func deleteTask(w http.ResponseWriter, r *http.Request, c *sql.DB) {
-	w.Write([]byte("Hello, world!"))
+	var task db.Task
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err := c.Exec("DELETE FROM tasks WHERE id = ?", task.ID)
+	if err != nil {
+		panic(err)
+	}
 }
